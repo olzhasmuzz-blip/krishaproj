@@ -1,3 +1,5 @@
 crawler/__pycache__/
 *.pyc
+.package-stage/
+*.tar.gz
 

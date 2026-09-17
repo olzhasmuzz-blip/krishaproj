@@ -2,7 +2,7 @@ name: Krisha BeautifulSoup poller
 
 on:
   schedule:
-    - cron: "2-59/5 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
   push:
     paths:
@@ -42,3 +42,4 @@ jobs:
             git -c user.name="estate-radar-bot" -c user.email="estate-radar-bot@users.noreply.github.com" commit -m "Refresh parsed Krisha feed"
             git push
           fi
+

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-worker.mjs"
+    "build": "node scripts/build-worker.mjs",
+    "test": "npm run build && node --test tests/worker-moderation.test.mjs"
   }
 }
-

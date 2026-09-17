@@ -1,0 +1,9 @@
+{
+  "poll_interval_minutes": 15,
+  "minimum_request_interval_seconds": 2,
+  "urls": [
+    "https://krisha.kz/prodazha/kvartiry/almaty/",
+    "https://krisha.kz/prodazha/kvartiry/astana/"
+  ]
+}
+

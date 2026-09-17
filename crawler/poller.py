@@ -162,7 +162,8 @@ def main() -> int:
 
     unchanged = bool(old_feed.get("items")) and content_signature(old_feed.get("items", [])) == content_signature(items_out)
     feed = {"source": "krisha.kz", "parser": "BeautifulSoup/html.parser", "parser_version": "krisha-bs4-1.1.0",
-            "status": "healthy" if not failures else "partial", "updated_at": old_feed.get("updated_at") if unchanged else observed_at, "checked_urls": urls,
+            "status": "healthy" if not failures else "partial", "updated_at": old_feed.get("updated_at") if unchanged else observed_at,
+            "checked_at": observed_at, "poll_interval_minutes": int(searches_doc.get("poll_interval_minutes", 5)), "checked_urls": urls,
             "failed_urls": failures, "bootstrap": is_bootstrap, "count": len(items_out), "items": items_out, "events": events}
     temp_path = output_path.with_suffix(output_path.suffix + ".tmp")
     temp_path.write_text(json.dumps(feed, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -177,4 +178,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,5 +1,7 @@
 crawler/__pycache__/
 *.pyc
 .package-stage/
+.package-stage-2/
 *.tar.gz
+.estate-radar/
 

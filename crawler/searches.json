@@ -2,7 +2,8 @@
   "poll_interval_minutes": 5,
   "minimum_request_interval_seconds": 2,
   "urls": [
-    "https://krisha.kz/prodazha/kvartiry/almaty/",
-    "https://krisha.kz/prodazha/kvartiry/astana/"
+    "https://krisha.kz/prodazha/kvartiry/almaty/?sort_by=add_date-desc",
+    "https://krisha.kz/prodazha/kvartiry/astana/?sort_by=add_date-desc"
   ]
 }
+

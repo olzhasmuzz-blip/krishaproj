@@ -48,6 +48,22 @@ class KrishaParserTest(unittest.TestCase):
         self.assertIn("свежий ремонт", item.description)
         self.assertIn("https://photos.example/full.jpg", item.photo_urls)
 
+    def test_search_ignores_listing_links_outside_result_cards(self):
+        html = '''
+        <html><body>
+          <div class="a-card a-storage-live" data-id="123456789">
+            <a class="a-card__title" href="/a/show/123456789">2-комнатная квартира · 58 м²</a>
+            <div class="a-card__price">42 000 000 ₸</div>
+          </div>
+          <aside class="recommendations">
+            <a href="/a/show/987654321">Рекомендованное объявление · 3-комнатная</a>
+          </aside>
+        </body></html>
+        '''
+        parser = KrishaParser(min_interval_s=0)
+        items = parser.parse_search_page(html, page_url="https://krisha.kz/prodazha/kvartiry/almaty/")
+        self.assertEqual([item.source_id for item in items], ["123456789"])
+
 
 if __name__ == "__main__":
     unittest.main()

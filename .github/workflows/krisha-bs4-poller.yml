@@ -1,0 +1,45 @@
+name: Krisha BeautifulSoup poller
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krisha-bs4-poller.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: krisha-bs4-poller
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: crawler/requirements.txt
+      - name: Install parser dependencies
+        run: python -m pip install -r crawler/requirements.txt
+      - name: Fetch and parse Krisha HTML with BeautifulSoup
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+        run: python -m crawler.poller --searches crawler/searches.json --output data/krisha-feed.json --state .estate-radar/state.sqlite3
+      - name: Publish normalized feed snapshot
+        run: |
+          git add data/krisha-feed.json
+          if ! git diff --cached --quiet; then
+            git -c user.name="estate-radar-bot" -c user.email="estate-radar-bot@users.noreply.github.com" commit -m "Refresh parsed Krisha feed"
+            git push
+          fi
+

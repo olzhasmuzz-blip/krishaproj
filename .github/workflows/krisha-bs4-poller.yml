@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - ".github/workflows/krisha-bs4-poller.yml"
+      - "crawler/**"
 
 permissions:
   contents: write

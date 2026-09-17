@@ -138,7 +138,8 @@ class KrishaParser:
         observed = (observed_at or datetime.now(timezone.utc)).isoformat()
         result: list[KrishaListing] = []
         seen: set[str] = set()
-        listing_cards = soup.select(".a-card[data-id]")
+        search_list = soup.select_one(".a-search-list")
+        listing_cards = search_list.select(".a-card[data-id]") if search_list else soup.select(".a-card[data-id]")
         anchors = (
             (card, anchor)
             for card in listing_cards

@@ -51,12 +51,16 @@ class KrishaParserTest(unittest.TestCase):
     def test_search_ignores_listing_links_outside_result_cards(self):
         html = '''
         <html><body>
-          <div class="a-card a-storage-live" data-id="123456789">
-            <a class="a-card__title" href="/a/show/123456789">2-комнатная квартира · 58 м²</a>
-            <div class="a-card__price">42 000 000 ₸</div>
-          </div>
+          <section class="a-list a-search-list">
+            <div class="a-card a-storage-live" data-id="123456789">
+              <a class="a-card__title" href="/a/show/123456789">2-комнатная квартира · 58 м²</a>
+              <div class="a-card__price">42 000 000 ₸</div>
+            </div>
+          </section>
           <aside class="recommendations">
-            <a href="/a/show/987654321">Рекомендованное объявление · 3-комнатная</a>
+            <div class="a-card a-storage-live" data-id="987654321">
+              <a href="/a/show/987654321">Рекомендованное объявление · 3-комнатная</a>
+            </div>
           </aside>
         </body></html>
         '''

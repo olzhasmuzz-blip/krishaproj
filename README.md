@@ -1,31 +1,36 @@
-# Estate Radar: production source adapter
+# Estate Radar
 
-Estate Radar is a separate Site from UkaLead. Krisha HTML is fetched and parsed by the Python BeautifulSoup crawler in a scheduled GitHub Action; the Site Worker only serves the normalized JSON feed and CRM API. Search segments are configured in `crawler/searches.json` and run every 15 minutes.
+Estate Radar is a separate product from UkaLead. It monitors public Krisha.kz search results with a Python crawler built on Requests and BeautifulSoup, stores a normalized feed, and can notify subscribed Telegram chats about newly found listings and price changes.
 
-Configure these repository Actions secrets to enable Telegram notifications:
+## Public listings
 
-- `TELEGRAM_BOT_TOKEN`: BotFather token for the notification bot.
-- `TELEGRAM_CHAT_IDS`: comma-separated chat IDs to receive new listing and price-change alerts.
+Searches are configured in `crawler/searches.json`. GitHub Actions runs the poller on a five-minute schedule; Actions may start scheduled jobs late, so this is a target interval rather than a real-time guarantee. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
 
-Run the same BeautifulSoup poller locally with:
+Run the poller locally:
 
 ```bash
 python -m pip install -r crawler/requirements.txt
 python -m crawler.poller --searches crawler/searches.json --output data/krisha-feed.json
 ```
 
-For `api`, the response may be an array of listing objects or `{ "items": [...] }`. At minimum, each item should contain `source_id`, `url`, `title`; additional normalized fields are passed through to the event pipeline in the next backend slice.
+Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_IDS` as repository Actions secrets to enable public-listing alerts. CAPTCHA/challenge pages and HTTP 403/429 responses are reported as source failures; the crawler does not attempt to bypass them.
 
-For `html`, the adapter currently extracts links matching `/a/show/<id>` and their visible anchor text. A production parser should add a versioned extractor for the exact approved response shape, with contract fixtures, field-level provenance, and a quarantine path for markup changes.
+## Before-publication events
 
-The adapter returns:
+The public parser can only discover a listing after Krisha exposes it in public search. For a notification during moderation, the Krisha listing lifecycle service must emit `listing.submitted_for_moderation` after committing that state transition and deliver it from a durable outbox to the separate API-only receiver:
 
-```json
-{
-  "items": [{"source_id":"696148729","url":"https://krisha.kz/a/show/696148729","title":"..."}],
-  "source": {"mode":"api","source":"krisha.kz","status":"healthy","count":1}
-}
+```text
+https://estate-radar-ingress.iolzhik220366.chatgpt.site/api/integrations/krisha/moderation/events
 ```
 
-The crawler parses HTML with BeautifulSoup (`html.parser`); the Worker does not extract listing fields from source HTML. It keeps a feed snapshot, detects new IDs and price changes, and sends Telegram messages when the two notification secrets are configured. The first run creates a baseline without flooding the chat; later runs alert only on new listings or changed prices. CAPTCHA/challenge pages and HTTP 403/429 responses are reported as source failures without trying to bypass them.
+The receiver verifies HMAC-SHA256, accepts an allowlist of listing fields, deduplicates retries, stores pending Telegram deliveries separately, and exposes no public listing catalog. The event publisher helper is `integrations/krisha_moderation_publisher.py`. Configure `ESTATE_RADAR_MODERATION_WEBHOOK_URL` and the shared `KRISHA_MODERATION_WEBHOOK_SECRET` in the Krisha source service. Keep `KRISHA_MODERATION_ADMIN_KEY` separate and only in the receiver's secret store.
+
+The receiver is deployed and reachable, but the Krisha source service is not present in this repository. Production Telegram delivery for moderation events also requires the receiver's `TELEGRAM_BOT_TOKEN` and at least one agency subscription with a chat ID. Until the source publisher and a subscription are configured, no live pre-moderation alerts are delivered.
+
+## Verification
+
+```bash
+npm test
+python -m unittest integrations.test_krisha_moderation_publisher crawler.test_krisha_parser
+```
 

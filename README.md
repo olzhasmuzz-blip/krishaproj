@@ -6,7 +6,7 @@ Estate Radar is a separate product from UkaLead. It monitors public Krisha.kz se
 
 Searches are configured in `crawler/searches.json` and use Krisha's public `sort_by=add_date-desc` query, which the public page identifies as the selected sort. The parser reads only `.a-card[data-id]` nodes inside `.a-search-list`; it ignores other listing links elsewhere in the HTML. Cards do not expose a publication timestamp, and their IDs changed substantially in repeated samples, so an alert means “first observed by this feed,” not a verified publication time.
 
-GitHub Actions is configured to poll every five minutes. As of 2026-09-17 08:51 UTC, the repository had successful push-triggered runs but no observed `schedule` run. Treat periodic polling as unverified until an actual scheduled run appears. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
+GitHub Actions is configured to poll every five minutes. As of 2026-09-17 08:55 UTC, the repository had successful push-triggered runs but no observed `schedule` run. Treat periodic polling as unverified until an actual scheduled run appears. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
 
 Run the poller locally:
 

@@ -68,4 +68,25 @@ Worker сохраняет ID события и объявления, время,
 4. Создайте фильтр агентства через закрытый административный маршрут `POST /api/integrations/krisha/moderation/subscriptions`, передав `Authorization: Bearer <KRISHA_MODERATION_ADMIN_KEY>`. Тело принимает `agency_name`, `telegram_chat_id` и необязательные фильтры `city`, `category`, `rooms_min`, `rooms_max`, `price_min_kzt`, `price_max_kzt`, `area_min_m2`, `area_max_m2`. Управление подписками доступно только с этим ключом.
 5. В сервисе Krisha вызовите webhook после фиксации статуса модерации. События можно повторять после сетевого сбоя: повтор с тем же ID и содержимым не создаст повторную доставку.
 
+Для отправителя в репозитории есть SDK `integrations/krisha_moderation_publisher.py`. Подключайте его из durable outbox сервиса Krisha: сначала сохраните событие перехода статуса с постоянным `event_id`, затем отправляйте его и повторяйте с тем же ID при сбое. Задайте там `ESTATE_RADAR_MODERATION_WEBHOOK_URL` и тот же `KRISHA_MODERATION_WEBHOOK_SECRET`, что у Worker. Отправитель собирает только разрешённые поля, подписывает точные UTF-8 байты JSON и требует HTTPS. Пример вызова после фиксации транзакции:
+
+```python
+from integrations.krisha_moderation_publisher import build_moderation_event, send_moderation_event
+
+event = build_moderation_event(
+    event_id=outbox_row.event_id,
+    occurred_at=outbox_row.created_at,
+    listing={
+        "source_id": listing.id,
+        "city": listing.city,
+        "category": listing.category,
+        "price_kzt": listing.price_kzt,
+        "rooms": listing.rooms,
+        "area_m2": listing.area_m2,
+    },
+)
+send_moderation_event(event)
+```
+
 Пока upstream-сервис Krisha не отправляет этот контракт, webhook остаётся закрытым и публичный монитор продолжает работать как раньше. Сейчас интеграция реализована на стороне Estate Radar; отправителя нужно подключить в сервисе, где фиксируется переход объявления на модерацию. В интерфейс публичной CRM предмодерационные записи не добавляются.
+

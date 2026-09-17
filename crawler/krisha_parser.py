@@ -78,7 +78,7 @@ class KrishaListing:
     photo_urls: list[str] = field(default_factory=list)
     first_seen_at: str = ""
     raw_title: str = ""
-    parser_version: str = "krisha-bs4-1.0.0"
+    parser_version: str = "krisha-bs4-1.1.0"
     provenance: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
@@ -144,24 +144,33 @@ class KrishaParser:
             if not match or match.group(1) in seen:
                 continue
             seen.add(match.group(1))
-            card = anchor
-            for parent in anchor.parents:
-                if isinstance(parent, Tag) and (parent.select_one('[data-testid*="price"], .a-card__price, .a-card__main-info')):
-                    card = parent
-                    break
-                if parent.name in {"body", "html"}:
-                    break
+            card = next((parent for parent in anchor.parents if isinstance(parent, Tag) and "a-card" in (parent.get("class") or [])), anchor)
+            if card is anchor:
+                for parent in anchor.parents:
+                    if isinstance(parent, Tag) and parent.select_one('[data-testid*="price"], .a-card__price, .a-card__main-info'):
+                        card = parent
+                        break
+                    if parent.name in {"body", "html"}:
+                        break
             text = _clean(card.get_text(" ", strip=True))
-            title = _first_text(card, ["[data-testid='listing-title']", ".a-card__header", "h2", "h3"]) or _clean(anchor.get_text(" ", strip=True))
+            title = _first_text(card, ["[data-testid='listing-title']", ".a-card__title", ".a-card__header h2", ".a-card__header h3", "h2", "h3"]) or _clean(anchor.get("title") or anchor.get_text(" ", strip=True))
             listing = KrishaListing(source_id=match.group(1), url=urljoin(page_url, href), title=title, raw_title=title, first_seen_at=observed)
             listing.price_kzt = self._extract_price(card, text)
             listing.rooms = self._extract_rooms(card, text)
             listing.area_m2 = self._extract_area(card, text)
             listing.floor, listing.floors_total = self._extract_floor(card, text)
             listing.address = _first_text(card, ["[data-testid='listing-address']", ".a-card__address", ".a-card__subtitle"])
-            listing.seller_label = _first_text(card, ["[data-testid='seller-type']", ".a-card__user-type", ".a-card__bottom"])
-            listing.photo_urls = [urljoin(page_url, str(img.get("src") or img.get("data-src"))) for img in card.select("img[src], img[data-src]") if img.get("src") or img.get("data-src")]
+            listing.description = _first_text(card, ["[data-testid='description']", ".a-card__text-preview"])
+            listing.city = _first_text(card, ["[data-testid='listing-city']", ".a-card__stats-item"])
+            listing.district = self._extract_district(listing.address)
+            listing.residential_complex = _first_text(card, ["[data-testid='residential-complex']", ".a-card__complex"])
+            listing.seller_label = _first_text(card, ["[data-testid='seller-type']", ".a-card__owner-label", ".a-card__user-type"])
+            listing.photo_urls = self._extract_photos(card, page_url)
             listing.provenance = {"title": "search_html", "price_kzt": "search_html", "address": "search_html"}
+            if "krisha.kz" in page_url and not listing.city:
+                city_match = re.search(r"/([a-z-]+)/?$", page_url.rstrip("/") + "/", re.I)
+                if city_match:
+                    listing.city = {"almaty": "Алматы", "astana": "Астана", "nur-sultan": "Астана"}.get(city_match.group(1), city_match.group(1))
             result.append(listing)
         return result
 
@@ -207,6 +216,27 @@ class KrishaParser:
     def _extract_floor(node: Tag | BeautifulSoup, text: str) -> tuple[int | None, int | None]:
         match = FLOOR_RE.search(_first_text(node, ["[data-testid*='floor']", ".a-card__main-info", ".offer__parameters"]) or text)
         return (int(match.group(1)), int(match.group(2))) if match else (None, None)
+
+    @staticmethod
+    def _extract_district(address: str) -> str:
+        match = re.search(r"([^,]+(?:р-н|район))", address, re.I)
+        return _clean(match.group(1)) if match else ""
+
+    @staticmethod
+    def _extract_photos(card: Tag | BeautifulSoup, page_url: str) -> list[str]:
+        urls: list[str] = []
+        for picture in card.select("picture"):
+            if picture.get("data-full-src"):
+                urls.append(urljoin(page_url, str(picture["data-full-src"])))
+            for source in picture.select("source[srcset]"):
+                candidate = str(source.get("srcset") or "").split(",", 1)[0].strip().split(" ", 1)[0]
+                if candidate:
+                    urls.append(urljoin(page_url, candidate))
+        for image in card.select("img[src], img[data-src]"):
+            candidate = image.get("data-src") or image.get("src")
+            if candidate:
+                urls.append(urljoin(page_url, str(candidate)))
+        return list(dict.fromkeys(url for url in urls if "tooltip" not in url))[:12]
 
     def parse_search_url(self, url: str, *, etag: str | None = None, last_modified: str | None = None) -> tuple[list[KrishaListing], dict[str, str], int]:
         html, headers, status = self.fetch(url, etag=etag, last_modified=last_modified)

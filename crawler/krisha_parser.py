@@ -138,13 +138,22 @@ class KrishaParser:
         observed = (observed_at or datetime.now(timezone.utc)).isoformat()
         result: list[KrishaListing] = []
         seen: set[str] = set()
-        for anchor in soup.select('a[href*="/a/show/"]'):
+        listing_cards = soup.select(".a-card[data-id]")
+        anchors = (
+            (card, anchor)
+            for card in listing_cards
+            for anchor in card.select('a[href*="/a/show/"]')
+        ) if listing_cards else (
+            (None, anchor) for anchor in soup.select('a[href*="/a/show/"]')
+        )
+        for card, anchor in anchors:
             href = str(anchor.get("href") or "")
             match = LISTING_ID_RE.search(href)
             if not match or match.group(1) in seen:
                 continue
             seen.add(match.group(1))
-            card = next((parent for parent in anchor.parents if isinstance(parent, Tag) and "a-card" in (parent.get("class") or [])), anchor)
+            if card is None:
+                card = next((parent for parent in anchor.parents if isinstance(parent, Tag) and "a-card" in (parent.get("class") or [])), anchor)
             if card is anchor:
                 for parent in anchor.parents:
                     if isinstance(parent, Tag) and parent.select_one('[data-testid*="price"], .a-card__price, .a-card__main-info'):

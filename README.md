@@ -1,10 +1,12 @@
 # Estate Radar
 
-Estate Radar is a separate product from UkaLead. It monitors public Krisha.kz search results with a Python crawler built on Requests and BeautifulSoup, stores a normalized feed, and can notify subscribed Telegram chats about newly found listings and price changes.
+Estate Radar is a separate product from UkaLead. It monitors public Krisha.kz search results with a Python crawler built on httpx and BeautifulSoup, stores a normalized feed, and can notify subscribed Telegram chats about first-observed listings and price changes.
 
 ## Public listings
 
-Searches are configured in `crawler/searches.json` and use Krisha's public `sort_by=add_date-desc` query to keep the newest listings first and reduce ranking rotation. GitHub Actions runs the poller on a five-minute schedule; Actions may start scheduled jobs late, so this is a target interval rather than a real-time guarantee. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
+Searches are configured in `crawler/searches.json` and use Krisha's public `sort_by=add_date-desc` query, which the public page identifies as the selected sort. The parser reads only `.a-card[data-id]` nodes inside `.a-search-list`; it ignores other listing links elsewhere in the HTML. Cards do not expose a publication timestamp, and their IDs changed substantially in repeated samples, so an alert means “first observed by this feed,” not a verified publication time.
+
+GitHub Actions is configured to poll every five minutes. As of 2026-09-17 08:51 UTC, the repository had successful push-triggered runs but no observed `schedule` run. Treat periodic polling as unverified until an actual scheduled run appears. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
 
 Run the poller locally:
 

@@ -4,7 +4,7 @@ Estate Radar is a separate product from UkaLead. It monitors public Krisha.kz se
 
 ## Public listings
 
-Searches are configured in `crawler/searches.json`. GitHub Actions runs the poller on a five-minute schedule; Actions may start scheduled jobs late, so this is a target interval rather than a real-time guarantee. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
+Searches are configured in `crawler/searches.json` and use Krisha's public `sort_by=add_date-desc` query to keep the newest listings first and reduce ranking rotation. GitHub Actions runs the poller on a five-minute schedule; Actions may start scheduled jobs late, so this is a target interval rather than a real-time guarantee. The first run establishes a baseline unless `--bootstrap-notifications` is supplied.
 
 Run the poller locally:
 
